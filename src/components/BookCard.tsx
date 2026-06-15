@@ -70,7 +70,7 @@ export default function BookCard({ book, onBookClick, onAddToList, alreadyAdded 
             animate={{ scale: 1.15, opacity: 1, y: -10 }}
             exit={{ scale: 0.95, opacity: 0, y: 5 }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="absolute -inset-x-4 -inset-y-4 z-20 flex flex-col justify-end rounded-xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl shadow-black/80"
+            className="absolute -inset-x-4 -top-4 z-20 flex flex-col justify-start rounded-xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl shadow-black/80 h-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top half: Cover Thumbnail with Play/Read button */}
@@ -87,12 +87,23 @@ export default function BookCard({ book, onBookClick, onAddToList, alreadyAdded 
               </div>
             ) : (
               <div 
-                className="relative aspect-[16/9] w-full rounded-lg overflow-hidden bg-cover bg-center border border-zinc-800 mb-3"
-                style={{ backgroundImage: `url(${book.coverUrl})` }}
+                className="relative aspect-[16/9] w-full rounded-lg overflow-hidden border border-zinc-800 mb-3 bg-zinc-950"
                 onClick={() => onBookClick(book)}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-                <div className="absolute bottom-2 left-2 flex items-center justify-center h-8 w-8 rounded-full bg-rose-600 text-white shadow hover:scale-105 transition-transform">
+                {/* Blurred backdrop of the cover image */}
+                <div 
+                  className="absolute inset-0 bg-cover bg-center blur-md opacity-35 scale-110 select-none pointer-events-none"
+                  style={{ backgroundImage: `url(${book.coverUrl})` }}
+                />
+                {/* Centered book cover showing the full artwork without cropping */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={book.coverUrl}
+                  alt={book.title}
+                  className="absolute inset-0 m-auto h-full w-auto object-contain z-10 select-none pointer-events-none"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent z-20" />
+                <div className="absolute bottom-2 left-2 flex items-center justify-center h-8 w-8 rounded-full bg-rose-600 text-white shadow hover:scale-105 transition-transform z-30">
                   <Play className="h-4 w-4 fill-current ml-0.5" />
                 </div>
               </div>
@@ -100,14 +111,14 @@ export default function BookCard({ book, onBookClick, onAddToList, alreadyAdded 
 
             {/* Bottom half: Metadata and Action items */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="truncate text-sm font-bold text-zinc-100 pr-2 leading-snug w-[80%]" title={book.title}>
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="line-clamp-2 text-sm font-bold text-zinc-100 leading-snug flex-1" title={book.title}>
                   {book.title}
                 </h4>
                 
                 {/* Add To List Button */}
                 {onAddToList && (
-                  <div className="relative">
+                  <div className="relative flex-shrink-0 mt-0.5">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

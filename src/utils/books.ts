@@ -15,6 +15,32 @@ export interface Book {
 // Client-side cache for prefetched books
 const prefetchCache = new Map<string, Book>();
 
+// Client-side caches for lists (persists during client-side navigation)
+const categoryCache = new Map<string, Book[]>();
+const trendingCache = new Map<number, Book[]>();
+let bookOfTheDayCache: Book | null = null;
+
+// Safe localStorage helper functions checking for SSR context
+function getStoredItem<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : null;
+  } catch (e) {
+    console.error("Error reading localStorage key", key, e);
+    return null;
+  }
+}
+
+function setStoredItem<T>(key: string, value: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error("Error writing localStorage key", key, e);
+  }
+}
+
 export function getCachedBook(id: string): Book | undefined {
   return prefetchCache.get(id);
 }
@@ -600,6 +626,18 @@ export async function searchBooks(
 
 // Fetch list of books by category: Google Books → Open Library → Mock
 export async function getCategoryBooks(category: string, limit = 12): Promise<Book[]> {
+  const cacheKey = `${category}-${limit}`;
+  if (categoryCache.has(cacheKey)) {
+    return categoryCache.get(cacheKey)!;
+  }
+  const stored = getStoredItem<Book[]>(`bookflix_cat_${cacheKey}`);
+  if (stored && stored.length > 0) {
+    categoryCache.set(cacheKey, stored);
+    return stored;
+  }
+
+  let books: Book[] = [];
+
   // 1. Try Google Books
   try {
     const url = `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(category)}&orderBy=relevance&maxResults=${limit}`;
@@ -607,9 +645,7 @@ export async function getCategoryBooks(category: string, limit = 12): Promise<Bo
     if (res.ok) {
       const data = await res.json();
       if (data.items && data.items.length > 0) {
-        const books = data.items.map(parseGoogleBook);
-        books.forEach(cacheBook);
-        return books;
+        books = data.items.map(parseGoogleBook);
       }
     }
   } catch (error) {
@@ -617,19 +653,41 @@ export async function getCategoryBooks(category: string, limit = 12): Promise<Bo
   }
 
   // 2. Fallback: Open Library
-  try {
-    const olBooks = await getOpenLibraryCategoryBooks(category, limit);
-    if (olBooks.length > 0) return olBooks;
-  } catch (error) {
-    console.warn(`Open Library category "${category}" also failed, using mock:`, error);
+  if (books.length === 0) {
+    try {
+      const olBooks = await getOpenLibraryCategoryBooks(category, limit);
+      if (olBooks.length > 0) books = olBooks;
+    } catch (error) {
+      console.warn(`Open Library category "${category}" also failed, using mock:`, error);
+    }
   }
 
   // 3. Final fallback: Mock
-  return getMockCategoryBooks(category, limit);
+  if (books.length === 0) {
+    books = getMockCategoryBooks(category, limit);
+  }
+
+  if (books.length > 0) {
+    books.forEach(cacheBook);
+    categoryCache.set(cacheKey, books);
+    setStoredItem(`bookflix_cat_${cacheKey}`, books);
+  }
+  return books;
 }
 
 // Fetch trending books: Google Books → Open Library → Mock
 export async function getTrendingBooks(limit = 12): Promise<Book[]> {
+  if (trendingCache.has(limit)) {
+    return trendingCache.get(limit)!;
+  }
+  const stored = getStoredItem<Book[]>(`bookflix_trending_${limit}`);
+  if (stored && stored.length > 0) {
+    trendingCache.set(limit, stored);
+    return stored;
+  }
+
+  let books: Book[] = [];
+
   // 1. Try Google Books
   try {
     const url = `https://www.googleapis.com/books/v1/volumes?q=bestsellers&orderBy=newest&maxResults=${limit}`;
@@ -637,9 +695,7 @@ export async function getTrendingBooks(limit = 12): Promise<Book[]> {
     if (res.ok) {
       const data = await res.json();
       if (data.items && data.items.length > 0) {
-        const books = data.items.map(parseGoogleBook);
-        books.forEach(cacheBook);
-        return books;
+        books = data.items.map(parseGoogleBook);
       }
     }
   } catch (error) {
@@ -647,24 +703,47 @@ export async function getTrendingBooks(limit = 12): Promise<Book[]> {
   }
 
   // 2. Fallback: Open Library trending
-  try {
-    const olBooks = await getOpenLibraryTrendingBooks(limit);
-    if (olBooks.length > 0) return olBooks;
-  } catch (error) {
-    console.warn("Open Library trending also failed, using mock:", error);
+  if (books.length === 0) {
+    try {
+      const olBooks = await getOpenLibraryTrendingBooks(limit);
+      if (olBooks.length > 0) books = olBooks;
+    } catch (error) {
+      console.warn("Open Library trending also failed, using mock:", error);
+    }
   }
 
   // 3. Final fallback: Mock
-  return getMockTrendingBooks(limit);
+  if (books.length === 0) {
+    books = getMockTrendingBooks(limit);
+  }
+
+  if (books.length > 0) {
+    books.forEach(cacheBook);
+    trendingCache.set(limit, books);
+    setStoredItem(`bookflix_trending_${limit}`, books);
+  }
+  return books;
 }
 
 // Fetch featured Book of the Day
 export async function getBookOfTheDay(): Promise<Book> {
+  if (bookOfTheDayCache) {
+    return bookOfTheDayCache;
+  }
+  const stored = getStoredItem<Book>("bookflix_book_of_the_day");
+  if (stored) {
+    bookOfTheDayCache = stored;
+    return stored;
+  }
+
   const books = await getTrendingBooks(5);
+  let book: Book = MOCK_BOOKS[0];
   if (books.length > 0) {
     const day = new Date().getDate();
-    return books[day % books.length];
+    book = books[day % books.length];
   }
-  return MOCK_BOOKS[0];
+  bookOfTheDayCache = book;
+  setStoredItem("bookflix_book_of_the_day", book);
+  return book;
 }
 

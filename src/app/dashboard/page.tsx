@@ -22,7 +22,8 @@ export default function Dashboard() {
   const supabase = getSupabaseBrowserClient();
 
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [booksLoading, setBooksLoading] = useState(true);
 
   // Books Data
   const [featuredBook, setFeaturedBook] = useState<Book | null>(null);
@@ -47,6 +48,7 @@ export default function Dashboard() {
         return;
       }
       setUser(session.user);
+      setSessionChecked(true);
 
       try {
         // 2. Fetch User Books from Supabase
@@ -80,7 +82,7 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Error loading dashboard data:", err);
       } finally {
-        setLoading(false);
+        setBooksLoading(false);
       }
     }
 
@@ -128,12 +130,12 @@ export default function Dashboard() {
     }
   }, [user, userBooksStatuses, supabase]);
 
-  if (loading) {
+  if (!sessionChecked) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-zinc-950 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-rose-600" />
         <span className="text-sm font-semibold tracking-wider text-zinc-500 uppercase">
-          Curating Your Gallery...
+          Verifying Session...
         </span>
       </div>
     );
@@ -157,14 +159,28 @@ export default function Dashboard() {
         </MagneticButton>
       </div>
 
-      {/* Featured Hero Banner */}
-      {featuredBook && (
+      {/* Featured Hero Banner / Skeleton */}
+      {featuredBook ? (
         <Hero
           book={featuredBook}
           onBookClick={(book) => setSelectedBook(book)}
           onAddToList={handleAddToList}
           alreadyAdded={userBooksStatuses[featuredBook.id]}
         />
+      ) : (
+        /* Hero Skeleton */
+        <div className="relative w-full h-[70vh] min-h-[480px] max-h-[600px] flex items-center justify-start overflow-hidden bg-zinc-950 px-4 sm:px-6 lg:px-8 border-b border-zinc-900">
+          <div className="max-w-2xl space-y-4 w-full">
+            <div className="h-6 w-32 rounded bg-zinc-900 border border-zinc-800 animate-pulse" />
+            <div className="h-12 w-3/4 rounded bg-zinc-900 border border-zinc-800 animate-pulse" />
+            <div className="h-4 w-1/2 rounded bg-zinc-900 border border-zinc-800 animate-pulse" />
+            <div className="h-20 w-full rounded bg-zinc-900 border border-zinc-800 animate-pulse" />
+            <div className="flex gap-4 pt-2">
+              <div className="h-10 w-28 rounded-xl bg-zinc-900 border border-zinc-800 animate-pulse" />
+              <div className="h-10 w-28 rounded-xl bg-zinc-900 border border-zinc-800 animate-pulse" />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Carousels Category Lists */}
@@ -210,6 +226,7 @@ export default function Dashboard() {
         onClose={() => setSelectedBook(null)}
         onAddToList={handleAddToList}
         alreadyAdded={selectedBook ? userBooksStatuses[selectedBook.id] : undefined}
+        userId={user?.id}
       />
     </div>
   );

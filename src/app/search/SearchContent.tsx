@@ -74,7 +74,10 @@ export default function SearchContent({ initialQuery }: SearchContentProps) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 47 }, (_, i) => String(currentYear - i));
 
-  // Sync prop changes (handled via `key` prop in page.tsx)
+  // Sync prop changes (e.g. from navbar navigation)
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
 
   // Authenticate user and fetch their tracking list
   useEffect(() => {
@@ -478,6 +481,7 @@ export default function SearchContent({ initialQuery }: SearchContentProps) {
         alreadyAdded={
           selectedBook ? userBooksStatuses[selectedBook.id] : undefined
         }
+        userId={user?.id}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Star, BookOpen, Plus, Check, Calendar, User } from "lucide-react";
 import { Book } from "@/utils/books";
 import BookCoverPlaceholder from "./BookCoverPlaceholder";
+import BookComments from "./BookComments";
 
 interface BookModalProps {
   book: Book | null;
@@ -12,6 +13,7 @@ interface BookModalProps {
   onClose: () => void;
   onAddToList?: (book: Book, status: "reading" | "on_hold" | "finished") => Promise<void>;
   alreadyAdded?: "reading" | "on_hold" | "finished";
+  userId?: string;
 }
 
 export default function BookModal({
@@ -20,6 +22,7 @@ export default function BookModal({
   onClose,
   onAddToList,
   alreadyAdded,
+  userId,
 }: BookModalProps) {
   const [addingStatus, setAddingStatus] = useState<string | null>(null);
   const [prevBookId, setPrevBookId] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export default function BookModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="relative z-10 w-full max-w-3xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl"
+            className="relative z-10 w-full max-w-4xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl"
           >
             {/* Close Button */}
             <button
@@ -131,6 +134,11 @@ export default function BookModal({
                     <p className="text-sm text-zinc-400 leading-relaxed max-h-40 overflow-y-auto pr-2 scrollbar-thin">
                       {book.description}
                     </p>
+                  </div>
+
+                  {/* Community Reviews */}
+                  <div className="space-y-1 pt-2 border-t border-zinc-800">
+                    <BookComments bookId={book.id} userId={userId} />
                   </div>
                 </div>
 

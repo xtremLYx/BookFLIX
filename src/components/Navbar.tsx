@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Film, LogOut, Loader2, Sparkles, BookOpen } from "lucide-react";
+import { Search, Film, LogOut, Loader2, Sparkles, BookOpen, Users } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/utils/supabase";
 import { searchBooks, prefetchBookDetails, Book } from "@/utils/books";
 import BookCoverPlaceholder from "./BookCoverPlaceholder";
@@ -101,6 +101,15 @@ export default function Navbar({ user, onBookClick }: NavbarProps) {
                   }`}
                 >
                   Browse
+                </Link>
+                <Link
+                  href="/clubs"
+                  className={`hover:text-zinc-100 transition-colors flex items-center gap-1.5 ${
+                    pathname?.startsWith("/clubs") ? "text-zinc-100 font-semibold" : ""
+                  }`}
+                >
+                  <Users className="h-4 w-4" />
+                  Clubs
                 </Link>
                 <Link
                   href="/my-space"
